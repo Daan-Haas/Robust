@@ -16,27 +16,25 @@ bode(sys)
 
 Gsiso = -tf(b, a);
 
-step(sys)
-stepinfo(sys)
 
 %% Figures
+figure
+bode(Gsiso)
+
 figure
 pzmap(Gsiso)
 p = pole(Gsiso);
 z = zero(Gsiso);
 
 [Gm, Pm, Wcg, Wcp] = margin(Gsiso);
-Kp = 0.91;
-Ki = 0.28;
-Kd = 0;
-K = pid(Kp,Ki,Kd);
 
-CL = feedback(K, Gsiso);
+% K = pid(Kp,Ki,Kd);
 
+% pidTuner(Gsiso,'PID')
+
+CL = series(K,G);
 figure
 bode(CL)
-step(CL)
-stepinfo(CL)
 
 %% H infinity
 
