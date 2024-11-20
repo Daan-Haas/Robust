@@ -15,6 +15,7 @@ bode(sys)
 [bd, ad] = ss2tf(A, Bd, CSISO, DSISO);
 
 Gsiso = -tf(b, a);
+Gdisturbed = tf(bd, ad);
 
 step(sys)
 stepinfo(sys)
@@ -32,6 +33,8 @@ Kd = 0;
 K = pid(Kp,Ki,Kd);
 
 CL = feedback(K, Gsiso);
+
+pidTuner(Gsiso)
 
 figure
 bode(CL)
