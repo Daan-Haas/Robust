@@ -34,7 +34,7 @@ K = pid(Kp,Ki,Kd);
 
 CL = feedback(K, Gsiso);
 
-pidTuner(Gsiso)
+% pidTuner(Gsiso)
 
 figure
 bode(CL)

@@ -47,7 +47,7 @@ Kin = 0.5;
 Kdn = 0;
 Knew = pid(Kpn, Kin, Kdn);
 
-pidTuner(Gdisturbed)
+% pidTuner(Gdisturbed)
 
 CLn = Gdisturbed/(1+Gdisturbed*Knew);
 
