@@ -13,7 +13,7 @@ s = tf('s');
 % Define plant and in and outputs
 G = FWT(1:2, 1:2);
 G.u = 'u';
-G.y = 'v';
+G.y = 'y';
 
 % Calculate RGA
 Gw0 = freqresp(G, w0);
@@ -32,19 +32,19 @@ f_co = 0.3; % cut-off = bandwidth
 
 wp = [(s/3+0.3*2*pi)/(s+pi*6e-5) 0;
     0 0.05];
-wp.InputName = 'v';
-wp.OutputName = 'z1';
+wp.u = 'v';
+wp.y = 'z1';
 
 % wu given in question
 wu = [0.005 0;
-       0 (0.005*s^2 + 0.0007*s+0.00005)/(s^2 + 0.0014*s + 10e-6)];
-wu.InputName = 'u';
-wu.OutputName = 'z2';
+       0 (0.005*s^2 + 0.0007*s+0.00005)/(s^2 + 0.0014*s + 10^(-6))];
+wu.u = 'u';
+wu.y = 'z2';
 
 % Build system
-sumblock = sumblk('v = w + x');
+sumblock = sumblk("v = w + y", 2);
 
-P = connect(G, wu, wp, sumblock, {'u', 'w'}, {'z1', 'z2'});
+P = connect(G, wu, wp, sumblock, {'w', 'u'}, {'z1', 'z2', 'v'});
 
 
 % H infinity synthesis
@@ -52,35 +52,72 @@ nmeas = 2; %number of outputs of plant = number of inputs controller
 ncont = 2; 
 [K,CL,gamma] = hinfsyn(P,nmeas,ncont);
 
-K.InputName = 'v';
-K.OutputName = 'u';
+K.u = 'v';
+K.y = 'u';
 
-S = feedback(eye(2),series(G,K), 1:2, 1:2, 1);
-KS = feedback(K,series(G,K), 1:2, 1:2, 1);
+CLstep = feedback(-K*G, eye(2));
 
-wp11 = wp(1,1);
-wp22 = wp(2,2);
+step(CLstep)
+warning off
+systemnames ='FWT';     % The full wind turbine model should be available in your workspace
+inputvar ='[V; Beta; Tau]';    % Input generalized plant
+input_to_FWT= '[Beta; Tau; V]';
 
-figure(1)
-bodemag(S, [inv(wp11) inv(wp11); inv(wp22) inv(wp22)])
-legend('sensitivity', 'weights')
+outputvar= '[FWT; Beta; Tau; FWT]';    % Output generalized plant also includes the inputs
 
-norm(S, inf)
+sysoutname='Gsim';
 
-N = [wp*S;
-    wu*K*S];
-
-N = connect(P, K, 'w', {'z1', 'z2'});
-
-
-hinfnorm(N);
-
-systemnames = 'G wp wu' ; % Define systems
-inputvar = '[w(2); u(2)]' ; % Input generalized plant
-input_to_G= '[u]';
-input_to_wu= '[u]';
-input_to_wp= '[w+G]';
-outputvar= '[wp; wu; G+w]'; % Output generalized plant
-sysoutname='P2';
 sysic;
-[K2,CL2,GAM2,INFO2] = hinfsyn(P2,2,2); % Hinf design
+
+warning on
+
+%CL_sisocontroller=minreal(lft(Gsim(1:end-1,1:end-1),sisocontroller)); % SISO controller
+
+CL_mimocontroller = minreal(lft(Gsim, K)); % MIMO controller
+
+figure
+
+step(CL_mimocontroller); % simple code for a step on the wind
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% S = feedback(eye(2),series(G,K), 1:2, 1:2, 1);
+% KS = feedback(K,series(G,K), 1:2, 1:2, 1);
+% 
+% wp11 = wp(1,1);
+% wp22 = wp(2,2);
+% 
+% figure(1)
+% bodemag(S, [inv(wp11) inv(wp11); inv(wp22) inv(wp22)])
+% legend('sensitivity', 'weights')
+% 
+% norm(S, inf);
+% 
+% N = connect(P, K, 'w', {'z1', 'z2'});
+
+
+% hinfnorm(N);
+% 
+% systemnames = 'G wp wu' ; % Define systems
+% inputvar = '[w(2); u(2)]' ; % Input generalized plant
+% input_to_G= '[u]';
+% input_to_wu= '[u]';
+% input_to_wp= '[w+G]';
+% outputvar= '[wp; wu; G+w]'; % Output generalized plant
+% sysoutname='P2';
+% sysic;
+% [K2,CL2,GAM2,INFO2] = hinfsyn(P2,2,2); % Hinf design
