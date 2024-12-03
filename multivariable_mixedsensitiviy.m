@@ -10,8 +10,12 @@ Dm = D(:,1:2);
 % defining state-space and TF
 s = tf('s');
 
+% Define plant and in and outputs
 G = FWT(1:2, 1:2);
+G.u = 'u';
+G.y = 'v';
 
+% Calculate RGA
 Gw0 = freqresp(G, w0);
 Gw1 = freqresp(G, w1);
 
@@ -31,21 +35,19 @@ wp = [(s/3+0.3*2*pi)/(s+pi*6e-5) 0;
 wp.InputName = 'v';
 wp.OutputName = 'z1';
 
+% wu given in question
 wu = [0.005 0;
        0 (0.005*s^2 + 0.0007*s+0.00005)/(s^2 + 0.0014*s + 10e-6)];
 wu.InputName = 'u';
 wu.OutputName = 'z2';
 
+% Build system
 sumblock = sumblk('v = w + x');
 
-P = [wp series(G, wp);
-    zeros(2,2) wu;
-    eye(2) G];
+P = connect(G, wu, wp, sumblock, {'u', 'w'}, {'z1', 'z2'});
 
-P = balreal(minreal(P))
 
-P = connect(G, wu, wp, sumblock, {'u', 'w'}, {'z1', 'z2'})
-
+% H infinity synthesis
 nmeas = 2; %number of outputs of plant = number of inputs controller
 ncont = 2; 
 [K,CL,gamma] = hinfsyn(P,nmeas,ncont);
@@ -68,7 +70,7 @@ norm(S, inf)
 N = [wp*S;
     wu*K*S];
 
-N = connect(P, K, 'w', {'z1', 'z2'})
+N = connect(P, K, 'w', {'z1', 'z2'});
 
 
 hinfnorm(N);
