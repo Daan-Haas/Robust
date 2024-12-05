@@ -63,6 +63,7 @@ subplot(2,1,1)
 plot(tout, y(:,1,1))
 subplot(2,1,2)
 plot(tout, y(:,2,1))
+
 warning off
 systemnames ='FWT';     % The full wind turbine model should be available in your workspace
 inputvar ='[V; Beta; Tau]';    % Input generalized plant
