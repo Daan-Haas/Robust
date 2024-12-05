@@ -23,19 +23,19 @@ Wp_mimo.u = 'y';
 Wp_mimo.y = 'z1';
 
 Wu_mimo = wu;
-Wu_mimo.u = 'x';
+Wu_mimo.u = 'u';
 Wu_mimo.y = 'z2';
 
 
 G_mimo = -Gmimo;
-G_mimo.u = 'x';
+G_mimo.u = 'u';
 G_mimo.y = 'y';
 
 C_mimo = C_struct;
-C_mimo.u = 'y';
-C_mimo.y = '';
+C_mimo.u = 'e';
+C_mimo.y = 'u';
 
-Sum1 = sumblk('e = r - y', 2);
+Sum1 = sumblk('e = r - y');
 Mimo_Con = connect(G_mimo, Wp_mimo, Wu_mimo, C_mimo, Sum1, 'r', {'z1', 'z2', 'y'});
 
 opt = hinfstructOptions ('Display', 'final', 'RandomStart', 5);
