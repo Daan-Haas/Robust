@@ -17,22 +17,26 @@ bode(sys)
 Gsiso = -tf(b, a);
 Gdisturbed = tf(bd, ad);
 
+bode(sys)
+
+figure
 step(sys)
 stepinfo(sys)
 
 %% Figures
-figure
-pzmap(Gsiso)
+% figure
+% pzmap(Gsiso)
 p = pole(Gsiso);
 z = zero(Gsiso);
 
-[Gm, Pm, Wcg, Wcp] = margin(Gsiso);
+% [Gm, Pm, Wcg, Wcp] = margin(Gsiso);
 Kp = 0.91;
 Ki = 0.28;
-Kd = 0;
-K = pid(Kp,Ki,Kd);
+Kd = 0.0;
+Ts = 0.0;
+K = pid(Kp,Ki,Kd,Ts);
 
-CL = feedback(K, Gsiso);
+CL = getPIDLoopResponse(K, Gsiso, 'closed-loop');
 
 figure
 bode(CL)
