@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="title"/><w:jc w:val="left"/></w:pPr><w:r><w:t>SISO Analysis and Control Design</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>3. SISO Control Design for Reference Tracking</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[load statespace_data A B C D FWT
+
+% SISO: only first input, only first column of B
+BSISO = B(:,1);
+DSISO = 0;
+CSISO = C(1,:);
+
+s = tf('s');
+
+SISOsys = -ss(A, BSISO, CSISO, DSISO);
+
+figure
+margin(SISOsys)
+title('Bode plot of Plant')
+grid on
+
+% SISO TF
+[b, a] = ss2tf(A, BSISO, CSISO, DSISO);
+SISO_G = -tf(b, a);
+
+figure 
+step(SISOsys)
+grid on
+title('Step response of Plant')
+
+stepinfo(SISOsys)
+
+figure
+pzmap(SISO_G)
+
+SISO_poles = pole(SISO_G);
+SISO_zeros = zero(SISO_G);
+
+[Gm, Pm, Wcg, Wcp] = margin(SISO_G);
+Kp = 0.8;
+Ki = 0.28;
+Kd = 0;
+SISO_C = pid(Kp,Ki,Kd);
+
+%pidTuner(SISO_G, 'PI')
+
+SISO_CL = getPIDLoopResponse(SISO_C, SISO_G, 'closed-loop');
+
+figure
+margin(SISO_CL)
+%title('Bode Plot of Closed-Loop')
+grid on
+
+figure
+step(SISO_CL)
+title('Step Response of Closed-Loop')
+grid on 
+
+stepinfo(SISO_CL)]]></w:t></w:r></w:p><w:p><w:pPr><w:sectPr/></w:pPr></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>4. SISO Control Design for Disturbance Rejection</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[% SISO: only disturbance, only third column of B
+Bd = B(:,3);
+
+% SISO disturbance TF
+[bd, ad] = ss2tf(A, Bd, CSISO, DSISO);
+SISO_G_dis = tf(bd, ad);
+
+% Ref tracker on Disturbance input
+SISO_CL_dis = getPIDLoopResponse(SISO_C, SISO_G_dis, 'input-disturbance');
+
+figure
+margin(SISO_CL_dis)
+grid on
+
+figure
+step(SISO_CL_dis)
+title('Disturbance response with reference tracking controller')
+grid on ]]></w:t></w:r></w:p><w:p><w:pPr><w:sectPr/></w:pPr></w:p><w:p><w:pPr><w:pStyle w:val="title"/><w:jc w:val="left"/></w:pPr><w:r><w:t>Multi-variable Mixed Sensitivity</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>1. Computing RGA</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[w0 = 0;
+w1 = 0.2*3*pi;
+
+% Define plant and in and outputs
+MIMO_G = FWT(1:2, 1:2);
+MIMO_G.u = 'u';
+MIMO_G.y = 'y';
+
+% Calculate RGA
+Gw0 = freqresp(MIMO_G, w0);
+Gw1 = freqresp(MIMO_G, w1);
+
+RGAw0 = Gw0.*pinv(Gw0).'
+RGAw1 = Gw1.*pinv(Gw1).']]></w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>2. MIMO Poles and Zeros</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[% MIMO poles and zeros 
+MIMO_poles = pole(MIMO_G)
+MIMO_zeros = zero(MIMO_G)
+
+figure
+pzmap(MIMO_G)]]></w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>3. </w:t></w:r><w:customXml w:element="equation"><w:customXmlPr><w:attr w:name="displayStyle" w:val="false"/></w:customXmlPr><w:r><w:t>W_p</w:t></w:r></w:customXml></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[% Computing wp11
+
+f_co = 0.3; % cut-off = bandwidth
+
+wp = [(s/3+0.3*2*pi)/(s+pi*6e-5) 0;
+    0 0.05];
+wp.u = 'v';
+wp.y = 'z1';]]></w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>5. Generalised Plant</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[% Wu given
+wu = [0.005 0;
+       0 (0.005*s^2 + 0.0007*s+0.00005)/(s^2 + 0.0014*s + 10^(-6))];
+wu.u = 'u';
+wu.y = 'z2';
+
+% Build system
+sumblock = sumblk("v = w + y", 2);
+
+P = connect(MIMO_G, wu, wp, sumblock, {'w', 'u'}, {'z1', 'z2', 'v'});]]></w:t></w:r></w:p><w:p><w:pPr><w:sectPr/></w:pPr></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>7. Mixed-Sensitivity Generalised Controller</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[% H infinity synthesis
+nmeas = 2; %number of outputs of plant = number of inputs controller
+ncont = 2; 
+[MS_C,CLms,gamma] = hinfsyn(P,nmeas,ncont);
+
+MS_C.u = 'v';
+MS_C.y = 'u';
+
+ol = MS_C*MIMO_G
+tdet = eye(2) - ol;
+
+det = tdet(1,1)*tdet(2,2) - tdet(1,2)*tdet(2,1);
+
+nyquist(det);
+title('Nyquist of Determinant')
+
+disp('The generalised controller:');
+size(MS_C);
+
+disp('The generalised plant:');
+size(P);
+
+figure
+bodemag(MS_C)
+grid on
+
+%second plto is inverse notch structure- for fixed structure second element
+%should be like this]]></w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>8 Time-domain Simulation</w:t></w:r></w:p><w:p><mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="R2018b"><w:pPr><w:pStyle w:val="heading2"/><w:jc w:val="left"/></w:pPr></mc:Choice><mc:Fallback><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr></mc:Fallback></mc:AlternateContent><w:r><w:t>Reference Tracking</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[CLstep_hinf = feedback(-MS_C*MIMO_G, eye(2));
+
+[y, tout] = step(CLstep_hinf);
+
+figure
+step(CLstep_hinf)
+title('Step response using Generalised Controller')
+grid on
+
+figure
+title('Channel 1 only (NAME)')
+subplot(2,1,1)
+plot(tout, y(:,1,1))
+grid on
+subplot(2,1,2)
+plot(tout, y(:,2,1))
+grid on]]></w:t></w:r></w:p><w:p><mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="R2018b"><w:pPr><w:pStyle w:val="heading2"/><w:jc w:val="left"/></w:pPr></mc:Choice><mc:Fallback><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr></mc:Fallback></mc:AlternateContent><w:r><w:t>Disturbance Rejection</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[warning off
+systemnames ='FWT';   
+inputvar ='[V; Beta; Tau]';   
+input_to_FWT= '[Beta; Tau; V]';
+
+outputvar= '[FWT; Beta; Tau; FWT]'; 
+sysoutname='Gsim';
+sysic;
+warning on
+
+CL_mimocontroller = minreal(lft(Gsim, MS_C)); % MIMO controller
+
+figure
+step(CL_mimocontroller);
+title('Step Input Disturbance Wind')
+grid on]]></w:t></w:r></w:p><w:p><w:pPr><w:sectPr/></w:pPr></w:p><w:p><w:pPr><w:pStyle w:val="title"/><w:jc w:val="left"/></w:pPr><w:r><w:t>Fixed-Structure Control (SISO)</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>2-3. Fixed-Structure Controller Synthesis</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[Gsiso = FWT(1, 1);
+
+% Fixed Structure SISO controller
+s = tf('s');
+Kp = realp('Kp',1);
+Ki = realp('Ki',1);
+Kd = realp('Kd',1); 
+Tf = realp('Tf',1);
+
+Wp_simple = 0.95*(s+0.02*2*pi)/(0.016*pi+s);
+C_struct = Kp+Ki/s+(Kd*s)/(Tf*s+1);
+
+% SISO hinfstruct
+Wp_siso = Wp_simple;
+Wp_siso.u = 'e'; % On output or on error???
+Wp_siso.y = 'z1';
+
+G_siso = -Gsiso;
+G_siso.u = 'u';
+G_siso.y = 'y';
+
+C_siso = C_struct;
+C_siso.u = 'e';
+C_siso.y = 'u';
+
+Sum1 = sumblk('e = r - y');
+Siso_Con = connect(G_siso, Wp_siso, C_siso, Sum1, 'r', 'z1');
+
+opt = hinfstructOptions ('Display', 'final', 'RandomStart', 5);
+[N_siso, GAM] = hinfstruct(Siso_Con, opt);
+
+% Extract controller gains :
+Kp_opt = N_siso.Blocks.Kp.Value;
+
+Ki_opt = N_siso.Blocks.Ki.Value;
+Kd_opt = N_siso.Blocks.Kd.Value;
+Tf_opt = N_siso.Blocks.Tf.Value;
+
+Kfb_opt_pi = Kp_opt + Ki_opt / s;
+Kfb_opt_pid = Kp_opt + Ki_opt / s +( Kd_opt * s ) /( Tf_opt * s +1);
+
+Kfb_opt_pi.u = 'e';
+Kfb_opt_pi.y = 'u';
+
+Kfb_opt_pid.u = 'e';
+Kfb_opt_pid.y = 'u';
+
+S_pi = 1/ (1 + series(G_siso, Kfb_opt_pi));
+S_pid = 1/ (1 + series(G_siso, Kfb_opt_pid));
+
+figure
+bodemag(S_pi, 1/Wp_siso)
+title('Sensitivity PI vs Wp')
+legend('PI Sensitivity', '1/W_p', Location='southeast')
+grid on
+
+figure
+bodemag(S_pid, 1/Wp_siso)
+title('Sensitivity PID vs Wp')
+legend('PID Sensitivity', '1/W_p', Location='southeast')
+grid on
+
+Hpi_SISO_CL = connect(G_siso, Kfb_opt_pi, Sum1, 'r', 'y');
+Hpid_SISO_CL = connect(G_siso, Kfb_opt_pid, Sum1, 'r', 'y');
+
+figure
+step(Hpi_SISO_CL)
+title('Step Response of Synthesised PI Controller')
+grid on 
+
+stepinfo(Hpi_SISO_CL)
+
+figure
+step(Hpid_SISO_CL)
+title('Step Response of Synthesised PID Controller')
+grid on 
+
+stepinfo(Hpid_SISO_CL)
+
+figure
+step(Hpi_SISO_CL, Hpid_SISO_CL)
+legend('PI Controller', 'PID Controller', Location='southeast')
+title('Step Response of Synthesised Controllers')
+grid on 
+
+stepinfo(Hpi_SISO_CL)
+stepinfo(Hpid_SISO_CL)]]></w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>4. Comparison synthesised vs manual </w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[figure
+step(Hpi_SISO_CL, SISO_CL)
+legend('Fixed Structure PI Controller', 'Manual PI Controller', Location='southeast')
+grid on
+
+figure
+step(Hpid_SISO_CL, SISO_CL)
+legend('Fixed Structure PID Controller', 'Manual PI Controller', Location='southeast')
+grid on]]></w:t></w:r></w:p><w:p><w:pPr><w:sectPr/></w:pPr></w:p><w:p><w:pPr><w:pStyle w:val="title"/><w:jc w:val="left"/></w:pPr><w:r><w:t>Fixed-Structure Control (MIMO)</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>1-3. Fixed-Structure Controller Synthesis</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[Gmimo = FWT(1:2, 1:2);
+
+Kp1 = realp('Kp1',-3000);
+Ki1 = realp('Ki1',210);
+% Kd1 = realp('Kd1',1);
+% Tf1 = realp('Tf1',1);
+
+% zeta = realp('zeta',1);
+% omega = realp('omega',1);
+
+% Define notch filter parameters
+wn_z = realp('wn_z', 7.8); 
+zeta_z = realp('zeta_z', -27); 
+wn_p = realp('wn_p', 0.18); 
+zeta_p = realp('zeta_p', -0.05);
+
+wp = [(s/3+0.3*2*pi)/(s+pi*6e-5) 0;
+    0 0.05];
+
+wu = [0.005 0;
+      0 (0.005*s^2 + 0.0007*s+0.00005)/(s^2 + 0.0014*s + 10e-6)];
+
+C1 = Kp1+Ki1/s;%+(Kd1*s)/(Tf1*s+1);
+% C2 = 2*zeta*omega*s/(s^2 + 2*zeta*omega*s + omega^2)
+Notch2 = (s^2 + 2*zeta_z*wn_z*s + wn_z^2) / (s^2 + 2*zeta_p*wn_p*s + wn_p^2);
+
+Wp_mimo = wp;
+Wp_mimo.u = 'e';
+Wp_mimo.y = 'z1';
+
+Wu_mimo = wu;
+Wu_mimo.u = 'u';
+Wu_mimo.y = 'z2';
+
+G_mimo = -Gmimo;
+G_mimo.u = 'u';
+G_mimo.y = 'y';
+
+C_mimo = [C1 0; Notch2 0];
+C_mimo.u = 'e';
+C_mimo.y = 'u';
+
+Sum1 = sumblk('e = r - y',2);
+Mimo_Con = connect(G_mimo, Wp_mimo, Wu_mimo, C_mimo, Sum1, 'r', {'z1', 'z2', 'y'});
+
+opt = hinfstructOptions ('Display', 'final', 'RandomStart', 50);
+N_mimo = hinfstruct(Mimo_Con, opt);
+ 
+% Extract controller gains :
+Kp1_opt = N_mimo.Blocks.Kp1.Value;
+Ki1_opt = N_mimo.Blocks.Ki1.Value;
+% Kd1_opt = N_mimo.Blocks.Kd1.Value;
+% Tf1_opt = N_mimo.Blocks.Tf1.Value;
+
+% zeta = N_mimo.Blocks.zeta.Value;
+% omega = N_mimo.Blocks.omega.Value;
+
+wn_z_opt = N_mimo.Blocks.wn_z.Value;
+zeta_z_opt = N_mimo.Blocks.zeta_z.Value;
+wn_p_opt = N_mimo.Blocks.wn_p.Value;
+zeta_p_opt = N_mimo.Blocks.zeta_p.Value;
+
+Kfb1_opt = Kp1_opt + Ki1_opt / s %+( Kd1_opt * s ) /( Tf1_opt * s +1);
+%Kfb2_opt = 2*zeta*omega*s/(s^2 + 2*zeta*omega*s + omega^2);
+notch_opt = (s^2 + 2*zeta_z_opt*wn_z_opt*s + wn_z_opt^2) / (s^2 + 2*zeta_p_opt*wn_p_opt*s + wn_p_opt^2)
+
+Kfb_opt = [Kfb1_opt 0; notch_opt 0];
+
+Kfb_opt.u = 'e';
+Kfb_opt.y = 'u';
+
+CLsysr = connect(G_mimo, Kfb_opt, Sum1, 'r', 'y');
+step(CLsysr)]]></w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="text"/><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Disturbance Rejection </w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[warning off
+systemnames ='FWT';   
+inputvar ='[V; Beta; Tau]';   
+input_to_FWT= '[Beta; Tau; V]';
+
+outputvar= '[FWT; Beta; Tau; FWT]'; 
+sysoutname='G_mimo';
+sysic;
+warning on
+
+CLsysd = minreal(lft(G_mimo, Kfb_opt));]]></w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>4. Comparing (Complementary) Sensitivities</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[% fixed-structure
+[num, denom] = ss2tf(CLsysr.A, CLsysr.B, CLsysr.C, CLsysr.D,1);
+tf_fs = tf(num(1,:), denom);
+
+S_fs = 1/(1-tf_fs);
+T_fs = 1 - S_fs;
+
+% H_inf 
+[num, denom] = ss2tf(CLstep_hinf.A, CLstep_hinf.B, CLstep_hinf.C, CLstep_hinf.D,1);
+tf_hinf = tf(num(1,:), denom);
+
+S_hinf = 1/(1-tf_hinf);
+T_hinf = 1 - S_hinf;
+
+figure
+hold on
+bode(S_fs)
+bode(S_hinf)
+legend('Fixed Structure','H\infty', Location='northeast')
+title('Sensitivity functions')
+grid on 
+
+figure
+hold on
+bode(T_fs)
+bode(T_hinf)
+legend('Fixed Structure','H\infty', Location='southwest')
+legend('boxoff')
+title('Complementary Sensitivity functions')
+grid on ]]></w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr><w:r><w:t>5. Comparing </w:t></w:r><w:customXml w:element="equation"><w:customXmlPr><w:attr w:name="displayStyle" w:val="false"/></w:customXmlPr><w:r><w:t>H_\infty</w:t></w:r></w:customXml><w:r><w:t> and Fixed-Structure Controllers </w:t></w:r></w:p><w:p><mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="R2018b"><w:pPr><w:pStyle w:val="heading2"/><w:jc w:val="left"/></w:pPr></mc:Choice><mc:Fallback><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr></mc:Fallback></mc:AlternateContent><w:r><w:t>Reference Tracking</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[% figure
+% step(CLsysr, 600)
+% title('Step response of Fixed stucture')
+% grid on 
+
+figure
+step(CLstep_hinf,CLsysr, 600)
+legend('H\infty','Fixed Structure')
+title('Step response on reference tracking')
+grid on]]></w:t></w:r></w:p><w:p><mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="R2018b"><w:pPr><w:pStyle w:val="heading2"/><w:jc w:val="left"/></w:pPr></mc:Choice><mc:Fallback><w:pPr><w:pStyle w:val="heading"/><w:jc w:val="left"/></w:pPr></mc:Fallback></mc:AlternateContent><w:r><w:t>Disturbance Rejection</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val="code"/></w:pPr><w:r><w:t><![CDATA[figure
+step(CLsysd, CL_mimocontroller, 150);
+title('Step Input Disturbance Wind on Fixed Structure')
+legend('Fixed Structure', 'H\infty')
+grid on
+
+% figure
+% step(CL_mimocontroller)
+% title('Disturbance Rejection H_\infty controller')
+% %legend('Fixed Structure', 'H_\infty')
+% grid on]]></w:t></w:r></w:p></w:body></w:document>
